@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -48,10 +49,12 @@ public class SnapScrolling : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (_contentRect.anchoredPosition.x >= _panelsPosition[0].x && !_isScrolling || _contentRect.anchoredPosition.x <= _panelsPosition[_panelsPosition.Length-1].x && !_isScrolling)
+        if (_contentRect.anchoredPosition.x >= _panelsPosition[0].x && !_isScrolling ||
+            _contentRect.anchoredPosition.x <= _panelsPosition[_panelsPosition.Length - 1].x && !_isScrolling)
         {
             scrollRect.inertia = false;
         }
+
         float nearestPosition = float.MaxValue;
         for (int i = 0; i < panelCount; i++)
         {
@@ -63,16 +66,17 @@ public class SnapScrolling : MonoBehaviour
             }
 
             float scale = Mathf.Clamp(1 / (distance / panelOffset) * scaleOffset, 0.5f, 1f);
-            _panelsScale[i].x = Mathf.SmoothStep(_panels[i].transform.localScale.x, scale, scaleSpeed * Time.fixedDeltaTime);
-            _panelsScale[i].y = Mathf.SmoothStep(_panels[i].transform.localScale.y, scale, scaleSpeed * Time.fixedDeltaTime);
-            _panels[i].transform.localScale = _panelsScale[i];
+            _panels[i].transform.DOScale(new Vector3(scale, scale, 1), scaleSpeed * Time.fixedDeltaTime).OnComplete(
+                () => { _panelsScale[i] = _panels[i].transform.localScale; });
+            
         }
 
         float scrollVelocity = Mathf.Abs(scrollRect.velocity.x);
         if (scrollVelocity < 400 && !_isScrolling) scrollRect.inertia = false;
-        if (_isScrolling || scrollVelocity>400) return;
+        if (_isScrolling || scrollVelocity > 400) return;
         _contentVector.x =
-            Mathf.SmoothStep(_contentRect.anchoredPosition.x, _panelsPosition[_selectedPanelID].x, snapSpeed*Time.fixedDeltaTime);
+            Mathf.SmoothStep(_contentRect.anchoredPosition.x, _panelsPosition[_selectedPanelID].x,
+                snapSpeed * Time.fixedDeltaTime);
         _contentRect.anchoredPosition = _contentVector;
     }
 

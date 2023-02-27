@@ -2,10 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
+using UI;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class SnapScrolling : MonoBehaviour
+public class SnapScrolling : MonoBehaviour, IInit<MainPanelDelegate>
 {
     [Range(1, 50)] [Header("controllers")] [SerializeField]
     private int panelCount;
@@ -19,6 +20,9 @@ public class SnapScrolling : MonoBehaviour
     [SerializeField] private float snapSpeed;
     [SerializeField] private float scaleOffset;
     [SerializeField] private float scaleSpeed;
+    [SerializeField] private CanvasGroup locationPanel;
+    [SerializeField] private CanvasController canvas;
+    [SerializeField] private Button enterbutton;
 
     private ScrollPanel[] _panels;
     private Vector2[] _panelsPosition;
@@ -27,13 +31,18 @@ public class SnapScrolling : MonoBehaviour
     private bool _isScrolling;
     private Vector2 _contentVector;
     private Vector2[] _panelsScale;
+    private ChangePanel _changePanel;
+    private event MainPanelDelegate _mainPanel;
 
     private void Start()
     {
+        _changePanel = new ChangePanel();
         _panels = new ScrollPanel[panelCount];
         _panelsPosition = new Vector2[panelCount];
         _contentRect = GetComponent<RectTransform>();
         _panelsScale = new Vector2[panelCount];
+        enterbutton.onClick.AddListener(()=>_mainPanel.Invoke());
+
         for (int i = 0; i < panelCount; i++)
         {
             _panels[i] = Instantiate(panelPrefab, transform, false);
@@ -47,12 +56,18 @@ public class SnapScrolling : MonoBehaviour
         }
     }
 
+    public void Initialize(MainPanelDelegate subscriber)
+    {
+        _mainPanel += subscriber;
+    }
+
     private void FixedUpdate()
     {
         if (_contentRect.anchoredPosition.x >= _panelsPosition[0].x && !_isScrolling ||
             _contentRect.anchoredPosition.x <= _panelsPosition[_panelsPosition.Length - 1].x && !_isScrolling)
         {
             scrollRect.inertia = false;
+            ShowLocationName(true);
         }
 
         float nearestPosition = float.MaxValue;
@@ -68,11 +83,15 @@ public class SnapScrolling : MonoBehaviour
             float scale = Mathf.Clamp(1 / (distance / panelOffset) * scaleOffset, 0.5f, 1f);
             _panels[i].transform.DOScale(new Vector3(scale, scale, 1), scaleSpeed * Time.fixedDeltaTime).OnComplete(
                 () => { _panelsScale[i] = _panels[i].transform.localScale; });
-            
         }
 
         float scrollVelocity = Mathf.Abs(scrollRect.velocity.x);
-        if (scrollVelocity < 400 && !_isScrolling) scrollRect.inertia = false;
+        if (scrollVelocity < 400 && !_isScrolling)
+        {
+            scrollRect.inertia = false;
+            ShowLocationName(true);
+        }
+
         if (_isScrolling || scrollVelocity > 400) return;
         _contentVector.x =
             Mathf.SmoothStep(_contentRect.anchoredPosition.x, _panelsPosition[_selectedPanelID].x,
@@ -83,6 +102,21 @@ public class SnapScrolling : MonoBehaviour
     public void Scroll(bool scroll)
     {
         _isScrolling = scroll;
+        ShowLocationName();
         if (scroll) scrollRect.inertia = true;
     }
+
+    private void ShowLocationName(bool value = false)
+    {
+        if (value)
+        {
+            locationPanel.DOFade(1, 0.3f);
+        }
+        else
+        {
+            locationPanel.DOFade(0, 0.3f);
+        }
+    }
+
+  
 }
